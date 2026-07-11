@@ -328,3 +328,139 @@ GitHub 自带一个"用完即焚"的功能，开启后，只要你点击了 **Me
 3. 勾选 **Automatically delete head branches**（自动删除头分支）
 
 > ✅ 开启后，以后只要 PR 成功合入，远程分支就再也不需要你操心了。
+
+## 十、GitHub 分支保护规则配置：如何设置需要 Review 才能合入
+
+目前 GitHub 最推荐且最稳定的做法是使用 **Rulesets（规则集）**。请按照以下步骤在网页端操作：
+
+### 1. 进入项目设置
+
+打开浏览器，进入你的 GitHub 目标仓库主页，点击正上方菜单栏最右边的 **Settings**（⚙️ 图标）。
+
+### 2. 新建规则集
+
+在左侧菜单栏找到 **Code and automation** 板块，点击 **Rulesets**，然后点击右上角的 **New ruleset** → 选择 **New branch ruleset**。
+
+### 3. 填写基础信息
+
+| 字段               | 操作                                               |
+| ------------------ | -------------------------------------------------- |
+| **Ruleset Name**   | 随便填一个名字，比如 `protect-main`                 |
+| **Enforcement status** | 必须把默认的 `Disabled` 改选为 **Active**（只有这样规则才会生效） |
+
+### 4. 指定保护主分支
+
+往下拉找到 **Target branches** 区域：
+
+1. 点击 **Add target** 按钮
+2. 选择 **Include by pattern**
+3. 在弹出的输入框中精准填入：`main`（或者你的主分支名，如 `master`）
+
+### 5. 开启 Review 拦截锁
+
+往下拉找到 **Branch rules** 区域：
+
+- 🔑 勾选 **Require a pull request before merging**（合并前需要 PR）
+- 🔑 勾选后下方会自动展开，继续勾选 **Require approvals**（需要审批）
+- 将所需的审批人数保持为 **1** 人即可
+
+### 6. 给自己留个后门（用于自己测试）
+
+页面往上滚一点，找到 **Bypass list**（绕过列表）区域：
+
+1. 点击 **+ Add bypass**
+2. 选择 **Repository Admin**（仓库管理员），确保右侧是 **Always**
+
+> 💡 这样设置后，别人提交必须走 Review，而你自己测试时可以通过点击绿色的”管理员绕过”直接强行合入。
+
+### 7. 保存
+
+直接拉到页面最底部，点击绿色的 **Save changes** 保存按钮。
+
+---
+
+## 十一、本地文件夹推送到受保护分支
+
+要把 Mac 本地的一个全新文件夹安全地推送到设置了保护的 `main` 分支（即通过提 PR、管理员绕过的流程合入），请在终端或 VS Code 内置终端里，严格按照以下步骤操作。
+
+> 📁 假设你的本地文件夹叫 `my-algorithm-code`。
+
+### 第一步：让 Git 认识这个文件夹（本地初始化）
+
+```bash
+# 进入该文件夹
+cd 路径/my-algorithm-code
+
+# 初始化本地 Git 仓库
+git init
+
+# 将默认分支改为 main（与 GitHub 保持一致）
+git branch -M main
+```
+
+### 第二步：将本地与 GitHub 远程仓库建立连接
+
+去 GitHub 网页上复制你那个仓库的 SSH 地址（例如 `git@github.com:你的用户名/仓库名.git`）。在终端运行以下命令，把远程仓库绑定为 `origin`：
+
+```bash
+git remote add origin 你的SSH地址
+```
+
+### 第三步：不能直推 main，必须建立本地”功能分支”
+
+> 🚨 因为你刚刚在网页上开启了 `main` 分支的保护规则，如果直接往 `main` 分支 push 会被 GitHub 服务器拒绝。
+
+新建并切换到一个临时分支（比如叫 `init-project`）：
+
+```bash
+git checkout -b init-project
+```
+
+保存本地文件变动并推送：
+
+```bash
+git add .
+git commit -m “feat: 初始化算法练习项目文件夹”
+git push origin init-project
+```
+
+### 第四步：去网页端提 PR 并用管理员身份合入
+
+1. 打开浏览器进入你的 GitHub 仓库主页
+2. 页面顶部会弹出一个黄色的提示条，点击 **Compare & pull request**
+3. 点击绿色的 **Create pull request** 按钮
+4. 进行合入：此时页面下方会显示红色拦截，提示需要 Review。但因为你在 Bypass list 里加了管理员，你只需要往下滚动，会看到一个带有黄色警告的按钮，直接点击 **Merge pull request**（或通过管理员权限强行合并），然后点击 **Confirm merge**
+
+---
+
+## 十二、远程仓库只有 init-project 分支，没有 main 分支怎么办
+
+这属于正常现象！因为你建立的是一个完全空白的全新 GitHub 仓库，第一笔代码直接推向了 `init-project`，GitHub 服务器上目前就只有这一个孤零零的分支，甚至还没来得及诞生 `main` 分支。
+
+我们要让它恢复成正常的以 `main` 为主分支、且受到保护的状态，只需要进行一次简单的”转换”和”重设”。
+
+### 第一步：在 GitHub 网页端将它重命名为 main
+
+因为现在仓库里只有这一个分支，它目前自动成为了你仓库的**默认分支（Default branch）**。直接在网页上把它改名即可：
+
+1. 打开浏览器，进入你的 GitHub 仓库主页
+2. 点击正上方横向菜单最右边的 **Settings**（⚙️ 设置）
+3. 在左侧菜单栏点击 **Branches**（分支）
+4. 在右侧的 **Default branch** 区域，你会看到 `init-project` 名字右侧有一个 ✏️（小铅笔/重命名）图标
+5. 点击它，将名字修改为：`main`，然后点击 **Rename** 确认
+
+### 第二步：在本地 Mac 终端同步改名并重新绑定
+
+为了防止你本地的终端和远程的 GitHub 名字对不上（本地还叫 `init-project`，远程叫 `main`），在 Mac 终端运行以下三行命令，让它们重新同步对齐：
+
+```bash
+# 1. 把你本地当前的 init-project 分支也重命名为 main
+git branch -m init-project main
+
+# 2. 从 GitHub 拉取最新的分支状态，对齐云端名字
+git fetch origin
+
+# 3. 重新建立本地 main 和远程 main 的追踪绑定
+git push -u origin main
+```
+
